@@ -8,8 +8,12 @@ Our team is developing an AI-powered Volatility Alert Dashboard designed to iden
 
   Our team is developing an AI-powered Volatility Alert Dashboard designed to identify abnormal foreign exchange market volatility in real time and present insights in a clear, accessible format. We chose this challenge because it combines several areas we’re eager to explore: working with live data streams, building predictive models more sophisticated than simple linear regression, and creating a tool with practical applications in financial markets. The FX market’s 24-hour nature and rapid price movements make it an ideal testing ground for real-time anomaly detection. Our goal is to build a system that can recognize unusual volatility patterns as they emerge and alert users before significant market shifts occur, essentially giving everyday users access to the kind of analytical tools typically reserved for professional traders. We’re particularly interested in learning how to balance model accuracy with processing speed, since real-time alerts lose their value if they arrive too late.
 
-### Research Doc: 
-- https://docs.google.com/document/d/1yryNcezrt72mmeifyQL35M6y_9nrDvmwCCJFgWq0h70/edit?tab=t.0
+### Links: 
+Project Drive: https://drive.google.com/drive/folders/1XAbKB6fsSppEcx8nad8z-Ma9tCw6YjJY
+Research Doc: https://docs.google.com/document/d/1yryNcezrt72mmeifyQL35M6y_9nrDvmwCCJFgWq0h70/edit?tab=t.0
+Class Slideshow: https://docs.google.com/presentation/d/1GMskDSF03pSVKtyE12F9Lt6LDrNPQ14WSMeTguRiFFE/edit?slide=id.g4dfce81f19_0_45#slide=id.g4dfce81f19_0_45
+
+
 
 ### List Of Group Members
 Quinn: Slides designer, communication with mentor
