@@ -10,7 +10,9 @@ Our team is developing an AI-powered Volatility Alert Dashboard designed to iden
 
 ### Links: 
 Project Drive: https://drive.google.com/drive/folders/1XAbKB6fsSppEcx8nad8z-Ma9tCw6YjJY
+
 Research Doc: https://docs.google.com/document/d/1yryNcezrt72mmeifyQL35M6y_9nrDvmwCCJFgWq0h70/edit?tab=t.0
+
 Class Slideshow: https://docs.google.com/presentation/d/1GMskDSF03pSVKtyE12F9Lt6LDrNPQ14WSMeTguRiFFE/edit?slide=id.g4dfce81f19_0_45#slide=id.g4dfce81f19_0_45
 
 
