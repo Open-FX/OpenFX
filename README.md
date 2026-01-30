@@ -13,9 +13,15 @@ Our team is developing an AI-powered Volatility Alert Dashboard designed to iden
 
 ### List Of Group Members
 Quinn: Slides designer, communication with mentor
+
 Emma: Research doc, Github Organization 
+
 Allison: Research doc, Github Organization 
+
 Nyleah: Research and translating data
+
 WenJun: Research and timeline management 
+
 Chris: Researching source for live data
+
 Maks: Research and translating data
