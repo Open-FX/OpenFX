@@ -1,0 +1,108 @@
+## REMEMBER: Limited to 100 requests per day.
+
+import yfinance as yf       # Library to fetch financial data from Yahoo Finance
+import pandas as pd         # Library for data manipulation
+import numpy as np          # Library for numerical calculations
+
+# -------------------------------
+# Function: Fetch near real-time FX data
+# -------------------------------
+def get_live_fx(pair="EURUSD=X", interval="1m", period="1d"):
+    """
+    Fetches near real-time FX data from Yahoo Finance.
+
+    Args:
+        pair (str): Yahoo Finance ticker for the currency pair (e.g., "EURUSD=X").
+        interval (str): Data interval ("1m", "5m", "15m", "1h", "1d").
+        period (str): Data period ("1d", "5d", "1mo", etc.).
+
+    Returns:
+        pd.DataFrame: DataFrame containing OHLCV data.
+    """
+    try:
+        ticker = yf.Ticker(pair)  # Create a Ticker object for the currency pair
+        df = ticker.history(interval=interval, period=period)  # Fetch historical data
+
+        if df.empty:  # Check if data is returned
+            return pd.DataFrame()  # Return empty DataFrame if no data
+            
+        # Drop columns you don't need (ignore errors if they don't exist)
+        df = df.drop(columns=["Volume", "Dividends", "Stock Splits"], errors="ignore")
+        return df  # Return the DataFrame
+    except Exception as e:
+        print(f"Error fetching data for {pair}: {e}")  # Print error if something goes wrong
+        return pd.DataFrame()  # Return empty DataFrame on failure
+
+# -------------------------------
+# Function: Calculate volatility
+# -------------------------------
+def calculate_volatility(df, window=20):
+    """
+    Calculates rolling volatility (standard deviation of returns).
+    """
+    returns = df['Close'].pct_change()  # Calculate percentage change (returns)
+    volatility = returns.rolling(window=window).std()  # Rolling standard deviation
+    return volatility
+
+# -------------------------------
+# Function: Calculate EMA
+# -------------------------------
+def calculate_ema(df, span=20):
+    """
+    Calculates Exponential Moving Average (EMA) of closing prices.
+    """
+    ema = df['Close'].ewm(span=span, adjust=False).mean()  # EMA calculation
+    return ema
+
+# -------------------------------
+# Function: Compare volatility to EMA
+# -------------------------------
+def is_volatility_high(volatility, ema):
+    """
+    Compares volatility to EMA to determine if volatility is high.
+    """
+    return volatility > (ema * 0.01)  # Example: volatility > 1% of EMA
+
+# -------------------------------
+# Main Execution
+# -------------------------------
+if __name__ == "__main__":
+    # List of currency pairs to check (Yahoo Finance format)
+    currency_pairs = [
+        "EURUSD=X",  # Euro / US Dollar
+        # "GBPUSD=X",  # British Pound / US Dollar
+        "USDJPY=X",  # US Dollar / Japanese Yen
+        #"AUDUSD=X",  # Australian Dollar / US Dollar
+        #"CNYUSD=X"   # Chinese Yuan / US Dollar
+    ]
+
+    # Loop through each currency pair
+    for pair in currency_pairs:
+        print(f"\n--- Processing {pair} ---")
+        
+        # Step 1: Fetch FX data
+        fx_data = get_live_fx(pair, interval="1m", period="1d")
+
+        if not fx_data.empty:
+            # Step 2: Calculate volatility
+            fx_data['Volatility'] = calculate_volatility(fx_data, window=20)
+
+            # Step 3: Calculate EMA
+            fx_data['EMA'] = calculate_ema(fx_data, span=20)
+
+            # Step 4: Compare volatility to EMA
+            fx_data['HighVolatility'] = is_volatility_high(fx_data['Volatility'], fx_data['EMA'])
+
+            # Step 5: Display last few rows
+            print(fx_data.tail())
+
+            # Step 6: Show latest volatility status
+            latest = fx_data.iloc[-1]
+            if latest['HighVolatility']:
+                print(f"⚠ High volatility detected for {pair} at {latest.name}: "
+                      f"Vol={latest['Volatility']:.5f}, EMA={latest['EMA']:.5f}")
+            else:
+                print(f"✅ Normal volatility for {pair} at {latest.name}: "
+                      f"Vol={latest['Volatility']:.5f}, EMA={latest['EMA']:.5f}")
+        else:
+            print(f"❌ No data available for {pair} (may not be supported by Yahoo Finance).")
