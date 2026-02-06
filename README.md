@@ -13,21 +13,19 @@ Project Drive: https://drive.google.com/drive/folders/1XAbKB6fsSppEcx8nad8z-Ma9t
 
 Research Doc: https://docs.google.com/document/d/1yryNcezrt72mmeifyQL35M6y_9nrDvmwCCJFgWq0h70/edit?tab=t.0
 
-Class Slideshow: https://docs.google.com/presentation/d/1GMskDSF03pSVKtyE12F9Lt6LDrNPQ14WSMeTguRiFFE/edit?slide=id.g4dfce81f19_0_45#slide=id.g4dfce81f19_0_45
-
 
 
 ### List Of Group Members
-Quinn: Slides designer, communication with mentor
+Quinn: Project Lead
 
-Emma: Research doc, Github Organization 
+Emma: Design Lead
 
-Allison: Research doc, Github Organization 
+Allison: Communication Lead
 
-Nyleah: Research and translating data
+Nyleah: Research Lead
 
-WenJun: Research and timeline management 
+WenJun: Timeline Manager
 
-Chris: Researching source for live data
+Chris: Data Analyst
 
-Maks: Research and translating data
+Maks: Testing & Feedback Lead
