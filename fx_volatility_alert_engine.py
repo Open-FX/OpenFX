@@ -1,211 +1,223 @@
-## REMEMBER: Limited to 100 requests per day from Yahoo Finance
-## This engine monitors top 5 currency pairs and updates every 60 seconds
+import yfinance as yf              # Fetch FX data from Yahoo Finance
+import pandas as pd               # Data handling
+import time                       # Sleep / timing
+import matplotlib.pyplot as plt   # Plotting
+from datetime import datetime     # Timestamps
 
-import yfinance as yf       # Library to fetch live FX data from Yahoo Finance
-import pandas as pd         # Library for handling data tables
-import time                 # Library to create delays between updates
-from datetime import datetime  # Library to display current date/time
 
 # -------------------------------
 # Function: Fetch live FX data
 # -------------------------------
 def get_live_fx(pair="EURUSD=X"):
     """
-    Fetches the latest FX price data from Yahoo Finance.
-    
-    Args:
-        pair (str): Currency pair ticker (e.g., "EURUSD=X")
-    
-    Returns:
-        pd.DataFrame: Latest price data, or empty if failed
+    Fetch latest 1-minute FX price data for the last day.
     """
     try:
-        ticker = yf.Ticker(pair)  # Create ticker object for the currency pair
-        df = ticker.history(period="1d", interval="1m")  # Get last day of 1-minute data
-        
-        if df.empty:  # Check if we got data back
-            return pd.DataFrame()  # Return empty if no data
-        
-        return df  # Return the price data
+        ticker = yf.Ticker(pair)
+        df = ticker.history(period="1d", interval="1m")
+        return df if not df.empty else pd.DataFrame()
     except Exception as e:
-        print(f"Error fetching {pair}: {e}")  # Print error message
-        return pd.DataFrame()  # Return empty on error
+        print(f"Error fetching {pair}: {e}")
+        return pd.DataFrame()
+
 
 # -------------------------------
 # Function: Calculate percentage change
 # -------------------------------
 def calculate_percent_change(df, lookback=5):
     """
-    Calculates the percentage change over the last few minutes.
-    
-    Args:
-        df: DataFrame with price data
-        lookback: How many minutes back to compare (default: 5)
-    
-    Returns:
-        float: Percentage change (e.g., 0.85 means +0.85%)
+    Calculates percentage price change over 'lookback' minutes.
     """
-    if len(df) < lookback:  # Make sure we have enough data points
+    if len(df) < lookback:
         return 0.0
-    
-    # Get current price (most recent)
-    current_price = df['Close'].iloc[-1]
-    
-    # Get price from 'lookback' minutes ago
-    old_price = df['Close'].iloc[-lookback]
-    
-    # Calculate percentage change: ((new - old) / old) * 100
-    pct_change = ((current_price - old_price) / old_price) * 100
-    
-    return pct_change
+
+    current_price = df["Close"].iloc[-1]
+    old_price = df["Close"].iloc[-lookback]
+
+    return ((current_price - old_price) / old_price) * 100
+
 
 # -------------------------------
-# Function: Check if alert should trigger
+# Function: Alert threshold check
 # -------------------------------
-def should_alert(pct_change, threshold=0.5):
+def should_alert(pct_change, threshold=0.1):
     """
-    Determines if the price change is large enough to trigger an alert.
-    
-    Args:
-        pct_change: Percentage change in price
-        threshold: Minimum change to trigger alert (default: 0.5%)
-    
-    Returns:
-        bool: True if alert should be triggered
+    Returns True if price movement exceeds threshold.
     """
-    # Check if absolute value of change exceeds threshold
     return abs(pct_change) >= threshold
+
 
 # -------------------------------
 # Function: Print alert message
 # -------------------------------
-def print_alert(pair, pct_change, current_price):
+def print_alert(pair, pct_change, price):
     """
-    Prints a formatted ALERT message to the terminal.
-    
-    Args:
-        pair: Currency pair symbol (e.g., "EUR/USD")
-        pct_change: Percentage change value
-        current_price: Current price of the pair
+    Prints formatted alert message to terminal.
     """
-    # Choose symbol based on direction of change
     direction = "📈" if pct_change > 0 else "📉"
-    
-    # Print the alert message
-    print(f"\n{'='*60}")
-    print(f"🚨 ALERT - {pair}")
-    print(f"   Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"   Current Price: ${current_price:.5f}")
-    print(f"   Change: {direction} {pct_change:+.2f}%")
-    print(f"{'='*60}\n")
+
+    if (pct_change <0.5 and pct_change > 0) or (pct_change > -0.5 and pct_change < 0):
+        print("\n" + "=" * 60)
+        print(f"🚨 MINOR ALERT - {pair}")
+        print(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"Price: ${price:.5f}")
+        print(f"Move: {direction} {pct_change:+.2f}%")
+        print("=" * 60 + "\n")
+    else:
+        print("\n" + "=" * 60)
+        print(f"🚨 MAJOR ALERT - {pair}")
+        print(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"Price: ${price:.5f}")
+        print(f"Move: {direction} {pct_change:+.2f}%")
+        print("=" * 60 + "\n")
+        
+
 
 # -------------------------------
-# Function: Monitor single currency pair
+# Function: Initialize dashboard
 # -------------------------------
-def monitor_pair(pair, threshold=0.5):
+def init_dashboard(pairs):
     """
-    Checks one currency pair and prints alert if needed.
-    
-    Args:
-        pair: Currency pair ticker (e.g., "EURUSD=X")
-        threshold: Alert threshold percentage
-    
-    Returns:
-        dict: Status information about this pair
+    Creates a single matplotlib dashboard with subplots
+    and returns references to line objects for live updates.
     """
-    # Fetch live data
-    data = get_live_fx(pair)
-    
-    if data.empty:  # If no data, skip this pair
-        return None
-    
-    # Calculate percentage change
-    pct_change = calculate_percent_change(data, lookback=5)
-    
-    # Get current price
-    current_price = data['Close'].iloc[-1]
-    
-    # Check if we should alert
-    if should_alert(pct_change, threshold):
-        # Print alert to terminal
-        print_alert(pair.replace("=X", ""), pct_change, current_price)
-    
-    # Return status info
-    return {
-        'pair': pair,
-        'price': current_price,
-        'change': pct_change,
-        'alerted': should_alert(pct_change, threshold)
+    plt.ion()  # Interactive mode ON (non-blocking updates)
+
+    fig = plt.figure(figsize=(14, 8))
+    fig.suptitle("OpenFX Live Volatility Dashboard", fontsize=16)
+
+    # Grid layout: 2 rows, 3 columns
+    grid_positions = {
+        pairs[0]: (2, 3, 1),
+        pairs[1]: (2, 3, 2),
+        pairs[2]: (2, 3, 4),
+        pairs[3]: (2, 3, 5),
+        pairs[4]: (2, 3, 3),
+        pairs[5]: (2, 3, 6)
     }
+
+    plots = {}
+
+    for pair, pos in grid_positions.items():
+        ax = fig.add_subplot(*pos)
+        ax.set_title(pair.replace("=X", ""))
+        ax.set_xlabel("Time")
+        ax.set_ylabel("Price")
+        ax.grid(True)
+
+        # Create an empty line (data filled later)
+        line, = ax.plot([], [], linewidth=2)
+
+        plots[pair] = {
+            "ax": ax,
+            "line": line
+        }
+
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    return fig, plots
+
+
+# -------------------------------
+# Function: Update subplot data
+# -------------------------------
+def update_plot(plot_obj, df):
+    """
+    Updates an existing subplot with new price data.
+    """
+    if df.empty:
+        return
+
+    times = df.index
+    prices = df["Close"]
+
+    line = plot_obj["line"]
+    ax = plot_obj["ax"]
+
+    line.set_data(times, prices)
+    ax.relim()
+    ax.autoscale_view()
+
 
 # -------------------------------
 # Main Monitoring Loop
 # -------------------------------
 def main():
     """
-    Main function that runs continuously every 60 seconds.
-    Monitors top 5 currency pairs and prints alerts when needed.
+    Runs FX monitoring, alerts, and dashboard updates every 60 seconds.
     """
-    # Top 5 most traded currency pairs (Yahoo Finance format)
-    top_5_pairs = [
-        "EURUSD=X",  # Euro / US Dollar (most traded)
-        "USDJPY=X",  # US Dollar / Japanese Yen
-        "GBPUSD=X",  # British Pound / US Dollar
-        "AUDUSD=X",  # Australian Dollar / US Dollar
-        "USDCAD=X"   # US Dollar / Canadian Dollar
+
+    pairs = [
+        "EURUSD=X",
+        "USDJPY=X",
+        "GBPUSD=X",
+        "USDCHF=X",
+        "USDCAD=X",
+        "AUDUSD=X"
+        
     ]
-    
-    # Alert threshold (0.5% change triggers alert)
-    alert_threshold = 0.5
-    
-    print("\n" + "="*60)
-    print("🚀 OpenFX Volatility Monitoring Engine Started")
-    print("="*60)
-    print(f"Monitoring: {len(top_5_pairs)} currency pairs")
-    print(f"Update interval: 60 seconds")
-    print(f"Alert threshold: ±{alert_threshold}%")
-    print("Press Ctrl+C to stop")
-    print("="*60 + "\n")
-    
-    # Continuous monitoring loop
-    cycle = 0  # Counter for how many times we've checked
-    
+
+    alert_threshold = 0.1
+
+    # Initialize dashboard
+    fig, plots = init_dashboard(pairs)
+
+    print("\n" + "=" * 60)
+    print("🚀 OpenFX Monitoring Engine Started")
+    print(f"Tracking {len(pairs)} currency pairs")
+    print("Dashboard active | Updates every 60 seconds")
+    print("Press Ctrl+C to exit")
+    print("=" * 60 + "\n")
+
+    cycle = 0
+
     try:
-        while True:  # Run forever until user stops with Ctrl+C
-            cycle += 1  # Increment cycle counter
-            
-            # Print status header
+        while True:
+            cycle += 1
             print(f"\n[Cycle {cycle}] {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
             print("-" * 60)
-            
-            # Check each currency pair
-            results = []
-            for pair in top_5_pairs:
-                status = monitor_pair(pair, threshold=alert_threshold)
-                if status:  # If we got data
-                    results.append(status)
-                    # Print quick status (non-alert)
-                    if not status['alerted']:
-                        pair_name = pair.replace("=X", "")
-                        print(f"✓ {pair_name}: ${status['price']:.5f} ({status['change']:+.2f}%)")
-            
-            # Print summary
-            alerts_count = sum(1 for r in results if r['alerted'])
-            print(f"\nStatus: {len(results)}/{len(top_5_pairs)} pairs checked | {alerts_count} alerts")
-            
-            # Wait 60 seconds before next check
-            print(f"Next update in 60 seconds...\n")
-            time.sleep(60)  # Pause for 60 seconds
-            
+
+            alerts = 0
+
+            for pair in pairs:
+                data = get_live_fx(pair)
+
+                if data.empty:
+                    print(f"⚠ {pair.replace('=X','')}: No data")
+                    continue
+
+                # Update dashboard plot
+                update_plot(plots[pair], data)
+
+                # Calculate movement
+                pct_change = calculate_percent_change(data)
+                price = data["Close"].iloc[-1]
+
+                # Alert logic
+                if should_alert(pct_change, alert_threshold):
+                    print_alert(pair.replace("=X", ""), pct_change, price)
+                    alerts += 1
+                else:
+                    print(f"✓ {pair.replace('=X','')}: ${price:.5f} ({pct_change:+.2f}%)")
+
+            # Redraw entire dashboard
+            fig.canvas.draw()
+            fig.canvas.flush_events()
+
+            print(f"\nStatus: {alerts} alerts | Next update in 60s\n")
+            plt.pause(60)
+
     except KeyboardInterrupt:
-        # User pressed Ctrl+C to stop
-        print("\n\n" + "="*60)
+        print("\n" + "=" * 60)
         print("🛑 Monitoring stopped by user")
         print(f"Total cycles completed: {cycle}")
-        print("="*60 + "\n")
+        print("=" * 60 + "\n")
+        plt.ioff()
+        plt.show(block=False)
+
 
 # -------------------------------
 # Run the engine
 # -------------------------------
 if __name__ == "__main__":
-    main()  # Start the monitoring engine
+    main()
+
