@@ -1,20 +1,18 @@
-import streamlit as st 
+import Streamlit as st 
 import pandas as pd 
 import yfinance as yf 
 from datetime import datetime, timedelta
 import time 
-# --------------------------------------------------------- 
+
 #  Streamlit Page Config
-# --------------------------------------------------------- 
 st.set_page_config(
-     page_title="OpenFX Live Dashboard", page_icon="💱", layout="wide" 
+     page_title="OpenFX Live Dashboard", layout="wide" 
      )
 
-st.title("💱 OpenFX Live Volatility Dashboard") 
+st.title("OpenFX Live Volatility Dashboard") 
 st.write("Real‑time FX monitoring with alerts and live charts.") 
-# --------------------------------------------------------- #
+
 #  Fetch FX Data 
-# --------------------------------------------------------- 
 @st.cache_data(ttl=60) 
 def get_live_fx(pair="EURUSD=X"): 
     try:
@@ -23,28 +21,25 @@ def get_live_fx(pair="EURUSD=X"):
         return df if not df.empty else pd.DataFrame()
     except: 
         return pd.DataFrame()
-# --------------------------------------------------------- 
+
 # Percent Change 
-# ---------------------------------------------------------
 def calculate_percent_change(df, lookback=5):
     if len(df) < lookback:
         return 0.0
     current_price = df["Close"].iloc[-1]
     old_price = df["Close"].iloc[-lookback]
     return ((current_price - old_price) / old_price) * 100
-# ---------------------------------------------------------
+
 # Alert Logic 
-# ---------------------------------------------------------
 def classify_alert(pct):
     if abs(pct) < 0.1:
         return None
     if abs(pct) < 0.5:
         return "minor"
     return "major"
-# --------------------------------------------------------- 
+
 # Sidebar Controls 
-# ---------------------------------------------------------
-st.sidebar.header("⚙️ Settings")
+st.sidebar.header("Settings")
 
 default_pairs = [
     "EURUSD=X", 
@@ -71,9 +66,7 @@ refresh_rate = st.sidebar.slider(
 
 st.sidebar.info("Dashboard auto‑refreshes when you click **Run**.")
 
-# --------------------------------------------------------- 
 # Main Dashboard 
-# ---------------------------------------------------------
 placeholder = st.empty()
 
 while True: 
@@ -83,9 +76,8 @@ while True:
 
         alert_messages = []
 
-        #---------------------------
         #Loop through each FX pair
-        #---------------------------
+        
         for i, pair in enumerate(pairs):
             df = get_live_fx(pair)
 
@@ -108,13 +100,13 @@ while True:
 
             # Collect alerts
             if alert_type:
-                alert_messages.append(pair, pct, price, alert_type))
+                alert_messages.append(pair, pct, price, alert_type)
 
             st.divider()
 
-            #-----------------------------
+            
             # Alerts Section
-            #-----------------------------
+            
             st.header("🚨 Alerts")
             
             if not alert_messages:
@@ -135,9 +127,9 @@ while True:
                         )
             st.divider()
 
-            #--------------------------------
+            
             # Charts Section
-            #-------------------------------
+            
             st.header("📈 Price Charts")
             
             for pair in pairs:
