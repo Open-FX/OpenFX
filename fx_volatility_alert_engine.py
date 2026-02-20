@@ -3,6 +3,7 @@ import pandas as pd               # Data handling
 import time                       # Sleep / timing
 import matplotlib.pyplot as plt   # Plotting
 from datetime import datetime     # Timestamps
+import mplcursors                 # Hover tooltips for spike lines
 
 
 # -------------------------------
@@ -56,21 +57,17 @@ def print_alert(pair, pct_change, price):
     """
     direction = "📈" if pct_change > 0 else "📉"
 
-    if (pct_change <0.5 and pct_change > 0) or (pct_change > -0.5 and pct_change < 0):
-        print("\n" + "=" * 60)
+    print("\n" + "=" * 60)
+
+    if abs(pct_change) < 0.5:
         print(f"🚨 MINOR ALERT - {pair}")
-        print(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        print(f"Price: ${price:.5f}")
-        print(f"Move: {direction} {pct_change:+.2f}%")
-        print("=" * 60 + "\n")
     else:
-        print("\n" + "=" * 60)
         print(f"🚨 MAJOR ALERT - {pair}")
-        print(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        print(f"Price: ${price:.5f}")
-        print(f"Move: {direction} {pct_change:+.2f}%")
-        print("=" * 60 + "\n")
-        
+
+    print(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"Price: ${price:.5f}")
+    print(f"Move: {direction} {pct_change:+.2f}%")
+    print("=" * 60 + "\n")
 
 
 # -------------------------------
@@ -78,15 +75,14 @@ def print_alert(pair, pct_change, price):
 # -------------------------------
 def init_dashboard(pairs):
     """
-    Creates a single matplotlib dashboard with subplots
-    and returns references to line objects for live updates.
+    Creates a matplotlib dashboard with subplots.
+    Also prepares storage for volatility spike lines.
     """
-    plt.ion()  # Interactive mode ON (non-blocking updates)
+    plt.ion()
 
     fig = plt.figure(figsize=(14, 8))
     fig.suptitle("OpenFX Live Volatility Dashboard", fontsize=16)
 
-    # Grid layout: 2 rows, 3 columns
     grid_positions = {
         pairs[0]: (2, 3, 1),
         pairs[1]: (2, 3, 2),
@@ -105,12 +101,13 @@ def init_dashboard(pairs):
         ax.set_ylabel("Price")
         ax.grid(True)
 
-        # Create an empty line (data filled later)
+        # Main price line
         line, = ax.plot([], [], linewidth=2)
 
         plots[pair] = {
             "ax": ax,
-            "line": line
+            "line": line,
+            "spike_lines": []  # Stores vertical spike markers
         }
 
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
@@ -139,12 +136,63 @@ def update_plot(plot_obj, df):
 
 
 # -------------------------------
+# Function: Draw vertical spike marker (SHORT LINE VERSION)
+# -------------------------------
+def draw_spike_line(plot_obj, timestamp, price, pct_change, is_major):
+    """
+    Draws a SHORT vertical line at spike timestamp.
+    Red = major spike
+    Blue = minor spike
+    """
+
+    ax = plot_obj["ax"]
+
+    # Choose spike color
+    color = "red" if is_major else "blue"
+
+    # Get current y-axis limits
+    ymin, ymax = ax.get_ylim()
+
+    # Calculate 15% of chart height
+    height = (ymax - ymin) * 0.15
+
+    # Draw a SHORT vertical line centered at spike price
+    spike_line = ax.plot(
+        [timestamp, timestamp],                   # Same X (vertical line)
+        [price - height/2, price + height/2],     # Small Y-range only
+        color=color,
+        linewidth=1.5,
+        alpha=0.85
+    )[0]
+
+    # Store line reference
+    plot_obj["spike_lines"].append(spike_line)
+
+    # Limit stored spike markers to last 8 (prevents clutter)
+    if len(plot_obj["spike_lines"]) > 8:
+        old_line = plot_obj["spike_lines"].pop(0)
+        old_line.remove()
+
+    # Add hover tooltip
+    cursor = mplcursors.cursor(spike_line, hover=True)
+
+    @cursor.connect("add")
+    def on_add(sel):
+        spike_type = "MAJOR SPIKE" if is_major else "MINOR ALERT"
+
+        sel.annotation.set_text(
+            f"{spike_type}\n"
+            f"Time: {timestamp.strftime('%H:%M:%S')}\n"
+            f"Price: {price:.5f}\n"
+            f"Move: {pct_change:+.2f}%"
+        )
+        sel.annotation.get_bbox_patch().set(fc="white", alpha=0.9)
+
+
+# -------------------------------
 # Main Monitoring Loop
 # -------------------------------
 def main():
-    """
-    Runs FX monitoring, alerts, and dashboard updates every 60 seconds.
-    """
 
     pairs = [
         "EURUSD=X",
@@ -153,12 +201,11 @@ def main():
         "USDCHF=X",
         "USDCAD=X",
         "AUDUSD=X"
-        
     ]
 
-    alert_threshold = 0.1
+    alert_threshold = 0.001     # Minor alert trigger
+    spike_threshold = 0.3     # Major spike trigger
 
-    # Initialize dashboard
     fig, plots = init_dashboard(pairs)
 
     print("\n" + "=" * 60)
@@ -185,25 +232,36 @@ def main():
                     print(f"⚠ {pair.replace('=X','')}: No data")
                     continue
 
-                # Update dashboard plot
                 update_plot(plots[pair], data)
 
-                # Calculate movement
                 pct_change = calculate_percent_change(data)
                 price = data["Close"].iloc[-1]
+                timestamp = data.index[-1]  # Capture spike time
 
-                # Alert logic
                 if should_alert(pct_change, alert_threshold):
                     print_alert(pair.replace("=X", ""), pct_change, price)
                     alerts += 1
+
+                    # Determine if major or minor
+                    is_major = abs(pct_change) >= spike_threshold
+
+                    # Draw vertical spike marker
+                    draw_spike_line(
+                        plots[pair],
+                        timestamp,
+                        price,
+                        pct_change,
+                        is_major
+                    )
                 else:
                     print(f"✓ {pair.replace('=X','')}: ${price:.5f} ({pct_change:+.2f}%)")
 
-            # Redraw entire dashboard
+            # Refresh dashboard
             fig.canvas.draw()
             fig.canvas.flush_events()
 
             print(f"\nStatus: {alerts} alerts | Next update in 60s\n")
+
             plt.pause(60)
 
     except KeyboardInterrupt:
@@ -220,4 +278,3 @@ def main():
 # -------------------------------
 if __name__ == "__main__":
     main()
-
