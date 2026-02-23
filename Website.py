@@ -71,7 +71,7 @@ placeholder = st.empty()
 
 while True: 
     with placeholder.container():
-        st.subheader(f"📊 Live FX Prices (Updated {datetime.now().strftime('%H:%M:%S')})") 
+        st.subheader(f"Live FX Prices (Updated {datetime.now().strftime('%H:%M:%S')})") 
         cols = st.columns(len(pairs))
 
         alert_messages = []
@@ -107,7 +107,7 @@ while True:
             
             # Alerts Section
             
-            st.header("🚨 Alerts")
+            st.header("Alerts")
             
             if not alert_messages:
                 st.success("No alerts triggered")
@@ -130,7 +130,7 @@ while True:
             
             # Charts Section
             
-            st.header("📈 Price Charts")
+            st.header("Price Charts")
             
             for pair in pairs:
                 df = get_live_fx(pair) 
